@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <context:component-scan base-package="com.yaojiafeng.tx.message"/>
+
+    <!-- 异步发送消息线程池 -->
+    <bean id="messageAsyncSendThreadPool" class="java.util.concurrent.ThreadPoolExecutor">
+        <constructor-arg index="0" value="10"/>
+        <constructor-arg index="1" value="20"/>
+        <constructor-arg index="2" value="0"/>
+        <constructor-arg index="3">
+            <util:constant static-field="java.util.concurrent.TimeUnit.SECONDS"/>
+        </constructor-arg>
+        <constructor-arg index="4">
+            <bean class="java.util.concurrent.LinkedBlockingQueue">
+                <constructor-arg index="0" value="1000"/>
+            </bean>
+        </constructor-arg>
+    </bean>
+
+    <bean id="propertySourcesPlaceholderConfigurer"
+          class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:config.properties</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="txMQSendClientProxy" class="com.yaojiafeng.tx.message.support.mq.TxMQSendClientProxy">
+        <property name="defaultMQProducer" ref="defaultMQProducer"/>
+    </bean>
+
+    <bean id="defaultMQProducer" class="org.apache.rocketmq.client.producer.DefaultMQProducer">
+        <constructor-arg index="0" value="PID_TX_MESSAGE"/>
+    </bean>
+
+    <!--  其他配置比如数据源，TOC定时任务  -->
+
+</beans>

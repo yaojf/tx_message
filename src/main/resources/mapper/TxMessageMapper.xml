@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.yaojiafeng.tx.message.dal.mapper.TxMessageMapper" >
+  <resultMap id="BaseResultMap" type="com.yaojiafeng.tx.message.dal.entity.TxMessage" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="message_type" property="messageType" jdbcType="TINYINT" />
+    <result column="message_content" property="messageContent" jdbcType="LONGVARCHAR" />
+    <result column="retry_count" property="retryCount" jdbcType="INTEGER" />
+    <result column="max_retry_count" property="maxRetryCount" jdbcType="INTEGER" />
+    <result column="status" property="status" jdbcType="TINYINT" />
+    <result column="app_name" property="appName" jdbcType="VARCHAR" />
+    <result column="app_env" property="appEnv" jdbcType="VARCHAR" />
+    <result column="expand" property="expand" jdbcType="VARCHAR" />
+    <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
+    <result column="edit_time" property="editTime" jdbcType="TIMESTAMP" />
+    <result column="editor" property="editor" jdbcType="VARCHAR" />
+    <result column="creator" property="creator" jdbcType="VARCHAR" />
+    <result column="is_deleted" property="isDeleted" jdbcType="BIT" />
+  </resultMap>
+  <sql id="Base_Column_List" >
+    id, message_type, message_content, retry_count, max_retry_count, status, app_name, app_env, expand,
+    create_time, edit_time, editor, creator, is_deleted
+  </sql>
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long" >
+    select 
+    <include refid="Base_Column_List" />
+    from t_tx_message
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <delete id="deleteByIds" parameterType="list" >
+    delete from t_tx_message
+    where id in
+    <foreach collection="list" separator="," open="(" index="index" item="id" close=")">
+      #{id,jdbcType=BIGINT}
+    </foreach>
+  </delete>
+  <insert id="insert" parameterType="com.yaojiafeng.tx.message.dal.entity.TxMessage" useGeneratedKeys="true" keyProperty="id" >
+    insert into t_tx_message (message_type, message_content, retry_count, max_retry_count,
+      status, app_name, app_env, 
+      expand, create_time, edit_time, 
+      editor, creator, is_deleted)
+    values (#{messageType,jdbcType=TINYINT}, #{messageContent,jdbcType=LONGVARCHAR}, #{retryCount,jdbcType=INTEGER}, #{maxRetryCount,jdbcType=INTEGER},
+      #{status,jdbcType=TINYINT}, #{appName,jdbcType=VARCHAR}, #{appEnv,jdbcType=VARCHAR}, 
+      #{expand,jdbcType=VARCHAR}, now(), now(),
+      #{editor,jdbcType=VARCHAR}, #{creator,jdbcType=VARCHAR}, 0)
+  </insert>
+  <update id="updateMessageStatus" parameterType="map" >
+    update t_tx_message
+    set retry_count = retry_count + 1,
+      status = #{status,jdbcType=TINYINT},
+      expand = #{expand,jdbcType=VARCHAR},
+      edit_time = now()
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <select id="queryMessage" resultMap="BaseResultMap" parameterType="com.yaojiafeng.tx.message.dal.query.TxMessageQuery" >
+    select
+    <include refid="Base_Column_List" />
+    from t_tx_message
+    where status in
+    <foreach collection="statusList" separator="," open="(" index="index" item="status" close=")">
+      #{status}
+    </foreach>
+    <if test="endEditTime != null ">
+      and edit_time &lt;= #{endEditTime}
+    </if>
+    <if test="queryRetry == true">
+      and retry_count &lt; max_retry_count
+    </if>
+    and app_name = #{appName} and app_env = #{appEnv}
+    limit #{limit}
+  </select>
+</mapper>

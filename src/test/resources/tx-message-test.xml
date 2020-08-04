@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+
+    <bean id="transactionManagerTxMessage"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSourceTxMessage"/>
+    </bean>
+
+    <bean id="sqlSessionFactoryTxMessage" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSourceTxMessage"/>
+        <property name="mapperLocations">
+            <array>
+                <value>classpath:mapper/TxMessageMapper.xml</value>
+            </array>
+        </property>
+    </bean>
+
+    <bean id="mapperScannerConfigurerTxMessage" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.yaojiafeng.tx.message.dal.mapper"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactoryTxMessage"/>
+    </bean>
+
+    <bean id="transactionTemplateTxMessage"
+          class="org.springframework.transaction.support.TransactionTemplate">
+        <property name="transactionManager">
+            <ref bean="transactionManagerTxMessage"/>
+        </property>
+    </bean>
+
+    <context:component-scan base-package="com.yaojiafeng.tx.message"/>
+
+    <!-- 异步发送消息线程池 -->
+    <bean id="messageAsyncSendThreadPool" class="java.util.concurrent.ThreadPoolExecutor">
+        <constructor-arg index="0" value="10"/>
+        <constructor-arg index="1" value="20"/>
+        <constructor-arg index="2" value="0"/>
+        <constructor-arg index="3">
+            <util:constant static-field="java.util.concurrent.TimeUnit.SECONDS"/>
+        </constructor-arg>
+        <constructor-arg index="4">
+            <bean class="java.util.concurrent.LinkedBlockingQueue">
+                <constructor-arg index="0" value="1000"/>
+            </bean>
+        </constructor-arg>
+    </bean>
+
+    <bean id="propertySourcesPlaceholderConfigurer"
+          class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:config.properties</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="txMQSendClientProxy" class="com.yaojiafeng.tx.message.support.mq.TxMQSendClientProxy">
+        <property name="defaultMQProducer" ref="defaultMQProducer"/>
+    </bean>
+
+    <bean id="defaultMQProducer" class="org.apache.rocketmq.client.producer.DefaultMQProducer">
+        <constructor-arg index="0" value="PID_TX_MESSAGE"/>
+    </bean>
+
+
+    <jdbc:embedded-database id="dataSourceTxMessage" type="H2">
+        <jdbc:script location="classpath:tx-message-table.sql"/>
+    </jdbc:embedded-database>
+
+</beans>
